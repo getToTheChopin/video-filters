@@ -16,6 +16,8 @@ const hud = document.getElementById('hud');
 const labelEl = document.getElementById('label');
 const errorEl = document.getElementById('error');
 const retryBtn = document.getElementById('retryBtn');
+const filterListEl = document.getElementById('filterList');
+let filterItems = [];
 
 let rafId = 0;
 const offscreen = document.createElement('canvas');
@@ -41,11 +43,42 @@ function setLabel(text) {
 function nextFilter() {
   state.filterIndex = (state.filterIndex + 1) % FilterList.length;
   setLabel(`${FilterList[state.filterIndex].name} • Clap to change • Space = next`);
+  updateFilterUIActive();
 }
 
 function prevFilter() {
   state.filterIndex = (state.filterIndex - 1 + FilterList.length) % FilterList.length;
   setLabel(`${FilterList[state.filterIndex].name} • Clap to change • Space = next`);
+  updateFilterUIActive();
+}
+
+// Build and manage the left-edge filter UI (liquid glass)
+function buildFilterUI() {
+  if (!filterListEl) return;
+  filterListEl.innerHTML = '';
+  filterItems = FilterList.map((f, i) => {
+    const li = document.createElement('li');
+    li.className = 'filterItem';
+    li.textContent = f.name;
+    li.dataset.index = String(i);
+    li.addEventListener('click', () => {
+      state.filterIndex = i;
+      setLabel(`${FilterList[state.filterIndex].name} • Clap to change • Space = next`);
+      updateFilterUIActive();
+    });
+    filterListEl.appendChild(li);
+    return li;
+  });
+  updateFilterUIActive();
+}
+
+function updateFilterUIActive() {
+  if (!filterItems || !filterItems.length) return;
+  for (let i = 0; i < filterItems.length; i++) {
+    const li = filterItems[i];
+    if (i === state.filterIndex) li.classList.add('active');
+    else li.classList.remove('active');
+  }
 }
 
 function computeCoverRect(srcW, srcH, dstW, dstH) {
@@ -311,8 +344,8 @@ async function initCamera() {
   }
   const constraints = {
     video: {
-      width: { ideal: 1280 },
-      height: { ideal: 720 },
+      width: { ideal: 1920 },
+      height: { ideal: 1080 },
       facingMode: 'user'
     },
     audio: false
@@ -363,4 +396,5 @@ function stop() {
 
 bindKeys();
 handleResize();
+buildFilterUI();
 start();
