@@ -4,7 +4,7 @@ export const FilterList = [
   { key: 'normal', name: 'Normal', kind: 'css', value: 'none' },
   { key: 'teal_orange', name: 'Cinematic Teal & Orange', kind: 'css', value: 'contrast(1.15) saturate(1.2) sepia(0.25) hue-rotate(330deg) saturate(1.2)' },
   { key: 'kodak_warm', name: 'Kodak Warm', kind: 'css', value: 'contrast(1.1) brightness(1.05) saturate(1.15) sepia(0.15)' },
-  { key: 'fuji_cool', name: 'Fuji Cool', kind: 'css', value: 'contrast(1.05) brightness(1.03) saturate(1.1) hue-rotate(205deg)' },
+  { key: 'fuji_cool', name: 'Fuji Cool', kind: 'css', value: 'contrast(1.02) brightness(1.01) saturate(1.06) hue-rotate(198deg)' },
   { key: 'bleach_bypass', name: 'Bleach Bypass', kind: 'css', value: 'contrast(1.4) saturate(0.3) brightness(1.02)' },
   { key: 'film_noir', name: 'Film Noir', kind: 'css', value: 'grayscale(1) contrast(1.2) brightness(1.02)' },
   { key: 'vintage_fade', name: 'Vintage Fade', kind: 'css', value: 'contrast(0.9) brightness(1.06) saturate(0.8) sepia(0.2)' },
