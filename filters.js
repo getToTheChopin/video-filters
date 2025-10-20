@@ -1,14 +1,18 @@
 // filters.js - Filter pipeline and list
 
 export const FilterList = [
-  { key: 'normal', name: 'Normal', kind: 'simple', value: 'none' },
-  { key: 'grayscale', name: 'Grayscale', kind: 'simple', value: 'grayscale(1)' },
-  { key: 'sepia', name: 'Sepia', kind: 'simple', value: 'sepia(1)' },
-  { key: 'invert', name: 'Invert', kind: 'simple', value: 'invert(1)' },
-  { key: 'hue', name: 'Hue Rotate', kind: 'simple', value: 'hue-rotate(180deg)' },
-  { key: 'blur', name: 'Blur', kind: 'simple', value: 'blur(4px)' },
-  { key: 'pixelate', name: 'Pixelate', kind: 'pixelate' },
-  { key: 'edge', name: 'Edge Detect', kind: 'edge' },
+  { key: 'normal', name: 'Normal', kind: 'css', value: 'none' },
+  { key: 'teal_orange', name: 'Cinematic Teal & Orange', kind: 'css', value: 'contrast(1.15) saturate(1.2) sepia(0.25) hue-rotate(330deg) saturate(1.2)' },
+  { key: 'kodak_warm', name: 'Kodak Warm', kind: 'css', value: 'contrast(1.1) brightness(1.05) saturate(1.15) sepia(0.15)' },
+  { key: 'fuji_cool', name: 'Fuji Cool', kind: 'css', value: 'contrast(1.05) brightness(1.03) saturate(1.1) hue-rotate(205deg)' },
+  { key: 'bleach_bypass', name: 'Bleach Bypass', kind: 'css', value: 'contrast(1.4) saturate(0.3) brightness(1.02)' },
+  { key: 'film_noir', name: 'Film Noir', kind: 'css', value: 'grayscale(1) contrast(1.2) brightness(1.02)' },
+  { key: 'vintage_fade', name: 'Vintage Fade', kind: 'css', value: 'contrast(0.9) brightness(1.06) saturate(0.8) sepia(0.2)' },
+  { key: 'matte_pastel', name: 'Matte Pastel', kind: 'css', value: 'contrast(0.85) brightness(1.08) saturate(0.9)' },
+  { key: 'vivid_pop', name: 'Vivid Pop', kind: 'css', value: 'contrast(1.2) saturate(1.35) brightness(1.02)' },
+  { key: 'muted', name: 'Muted', kind: 'css', value: 'contrast(0.95) saturate(0.75)' },
+  { key: 'golden_hour', name: 'Golden Hour', kind: 'css', value: 'sepia(0.2) hue-rotate(345deg) contrast(1.05) brightness(1.1) saturate(1.1)' },
+  { key: 'cool_night', name: 'Cool Night', kind: 'css', value: 'hue-rotate(210deg) contrast(1.08) brightness(0.98) saturate(1.05)' },
 ];
 
 export class FilterPipeline {
@@ -50,33 +54,29 @@ export class FilterPipeline {
     const w = this.w; const h = this.h;
     if (!w || !h) return;
 
-    switch (filterKey) {
-      case 'normal':
-        this.drawMirrored(offCtx, video, w, h, 'none');
-        break;
-      case 'grayscale':
-        this.drawMirrored(offCtx, video, w, h, 'grayscale(1)');
-        break;
-      case 'sepia':
-        this.drawMirrored(offCtx, video, w, h, 'sepia(1)');
-        break;
-      case 'invert':
-        this.drawMirrored(offCtx, video, w, h, 'invert(1)');
-        break;
-      case 'hue':
-        this.drawMirrored(offCtx, video, w, h, 'hue-rotate(180deg)');
-        break;
-      case 'blur':
-        this.drawMirrored(offCtx, video, w, h, 'blur(4px)');
-        break;
-      case 'pixelate':
+    const meta = FilterList.find(f => f.key === filterKey);
+    if (meta) {
+      if (meta.kind === 'css' || meta.kind === 'simple') {
+        this.drawMirrored(offCtx, video, w, h, meta.value || 'none');
+        return;
+      }
+      if (meta.kind === 'pixelate') {
         this.renderPixelate(offCtx, video);
-        break;
-      case 'edge':
+        return;
+      }
+      if (meta.kind === 'edge') {
         this.renderEdge(offCtx, video);
-        break;
-      default:
-        this.drawMirrored(offCtx, video, w, h, 'none');
+        return;
+      }
+    }
+
+    // Support special keys even if not present in FilterList
+    if (filterKey === 'pixelate') {
+      this.renderPixelate(offCtx, video);
+    } else if (filterKey === 'edge') {
+      this.renderEdge(offCtx, video);
+    } else {
+      this.drawMirrored(offCtx, video, w, h, 'none');
     }
   }
 

@@ -107,6 +107,9 @@ function startDrawLoop() {
     ctx.drawImage(offscreen, 0, 0, offscreen.width, offscreen.height, coverRect.x, coverRect.y, coverRect.w, coverRect.h);
     ctx.restore();
 
+    // Hand landmarks overlay
+    drawHandLandmarksOverlay();
+
     // Try to run hands every ~33ms without blocking RAF
     const now = performance.now();
     if (!state.handsBusy && now - state.lastHandsSend > 33 && video.readyState >= 2) {
@@ -123,10 +126,10 @@ function startDrawLoop() {
 }
 
 function createClapDetector() {
-  const thresholdRel = 0.12; // relative to min(width,height)
-  const minDurationMs = 120;
-  const cooldownMs = 800;
-  const hysteresisUp = thresholdRel * 1.3;
+  const thresholdRel = 0.16; // relative to min(width,height) — slightly easier to trigger
+  const minDurationMs = 90;  // require a shorter hold
+  const cooldownMs = 650;    // shorter cooldown between triggers
+  const hysteresisUp = thresholdRel * 1.35;
 
   let belowSince = null;
   let cooldownUntil = 0;
@@ -188,6 +191,62 @@ function palmCenter(landmarks) {
     sx += p.x; sy += p.y;
   }
   return { x: sx / idx.length, y: sy / idx.length };
+}
+
+const HAND_CONNECTIONS = [
+  [0,1],[1,2],[2,3],[3,4],
+  [5,6],[6,7],[7,8],
+  [9,10],[10,11],[11,12],
+  [13,14],[14,15],[15,16],
+  [17,18],[18,19],[19,20],
+  [0,5],[5,9],[9,13],[13,17]
+];
+
+function drawHandLandmarksOverlay() {
+  const res = state.handsResults;
+  if (!res || !res.multiHandLandmarks || !coverRect.w || !coverRect.h) return;
+
+  const hands = res.multiHandLandmarks;
+  const lw = Math.max(1.5, Math.round(Math.min(coverRect.w, coverRect.h) / 350));
+  const r = Math.max(2, Math.round(lw * 1.25));
+
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.lineWidth = lw;
+
+  for (let i = 0; i < hands.length; i++) {
+    const lm = hands[i];
+
+    // connections
+    for (let j = 0; j < HAND_CONNECTIONS.length; j++) {
+      const [a, b] = HAND_CONNECTIONS[j];
+      const pa = lm[a], pb = lm[b];
+      if (!pa || !pb) continue;
+      const ax = coverRect.x + pa.x * coverRect.w;
+      const ay = coverRect.y + pa.y * coverRect.h;
+      const bx = coverRect.x + pb.x * coverRect.w;
+      const by = coverRect.y + pb.y * coverRect.h;
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(bx, by);
+      ctx.stroke();
+    }
+
+    // points
+    for (let k = 0; k < lm.length; k++) {
+      const p = lm[k];
+      const x = coverRect.x + p.x * coverRect.w;
+      const y = coverRect.y + p.y * coverRect.h;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  ctx.restore();
 }
 
 // MediaPipe Hands
