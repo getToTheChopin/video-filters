@@ -42,13 +42,13 @@ function setLabel(text) {
 
 function nextFilter() {
   state.filterIndex = (state.filterIndex + 1) % FilterList.length;
-  setLabel(`${FilterList[state.filterIndex].name} • Clap to change • Space = next`);
+  setLabel(FilterList[state.filterIndex].name);
   updateFilterUIActive();
 }
 
 function prevFilter() {
   state.filterIndex = (state.filterIndex - 1 + FilterList.length) % FilterList.length;
-  setLabel(`${FilterList[state.filterIndex].name} • Clap to change • Space = next`);
+  setLabel(FilterList[state.filterIndex].name);
   updateFilterUIActive();
 }
 
@@ -63,7 +63,7 @@ function buildFilterUI() {
     li.dataset.index = String(i);
     li.addEventListener('click', () => {
       state.filterIndex = i;
-      setLabel(`${FilterList[state.filterIndex].name} • Clap to change • Space = next`);
+      setLabel(FilterList[state.filterIndex].name);
       updateFilterUIActive();
     });
     filterListEl.appendChild(li);
@@ -215,6 +215,42 @@ function makePointSmoother(alpha = 0.5) {
 const leftSmoother = makePointSmoother(0.4);
 const rightSmoother = makePointSmoother(0.4);
 
+// Simple per-hand track state for short-term prediction when a hand is momentarily lost
+const handTracks = {
+  left: { last: null, prev: null, lastSeen: 0 },
+  right: { last: null, prev: null, lastSeen: 0 },
+};
+
+const MAX_PREDICT_MS = 220; // allow ~0.22s of prediction during brief occlusions
+const MAX_SPEED = 0.004;    // normalized units per ms (clamps unrealistic velocity)
+
+function updateTrack(track, x, y, t) {
+  if (track.last) track.prev = track.last;
+  track.last = { x, y, t };
+  track.lastSeen = t;
+}
+
+function predictFromTrack(track, t) {
+  if (!track.last) return null;
+  const dt = Math.max(0, Math.min(t - track.last.t, MAX_PREDICT_MS));
+  if (!track.prev || track.prev.t === track.last.t) {
+    return { x: track.last.x, y: track.last.y, t };
+  }
+  const denom = Math.max(1, track.last.t - track.prev.t);
+  let vx = (track.last.x - track.prev.x) / denom;
+  let vy = (track.last.y - track.prev.y) / denom;
+  const mag = Math.hypot(vx, vy);
+  if (mag > MAX_SPEED && mag > 0) {
+    const s = MAX_SPEED / mag;
+    vx *= s; vy *= s;
+  }
+  let x = track.last.x + vx * dt;
+  let y = track.last.y + vy * dt;
+  x = Math.max(0, Math.min(1, x));
+  y = Math.max(0, Math.min(1, y));
+  return { x, y, t };
+}
+
 function palmCenter(landmarks) {
   // Use wrist + MCP joints for a stable palm center
   const idx = [0, 1, 5, 9, 13, 17];
@@ -291,8 +327,8 @@ async function initHands() {
     selfieMode: true,
     maxNumHands: 2,
     modelComplexity: 1,
-    minDetectionConfidence: 0.6,
-    minTrackingConfidence: 0.5,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.3,
   });
   hands.onResults(onHandsResults);
 }
@@ -311,18 +347,42 @@ function onHandsResults(results) {
     else if (label.toLowerCase() === 'right') rightLm = multi[i];
   }
 
-  const both = !!(leftLm && rightLm);
-  if (!both) {
+  const now = performance.now();
+
+  // Update tracks with observed palms
+  if (leftLm) {
+    const lC = palmCenter(leftLm);
+    updateTrack(handTracks.left, lC.x, lC.y, now);
+  }
+  if (rightLm) {
+    const rC = palmCenter(rightLm);
+    updateTrack(handTracks.right, rC.x, rC.y, now);
+  }
+
+  const leftFresh = handTracks.left.last && (now - handTracks.left.lastSeen) <= MAX_PREDICT_MS;
+  const rightFresh = handTracks.right.last && (now - handTracks.right.lastSeen) <= MAX_PREDICT_MS;
+
+  if (!leftFresh && !rightFresh) {
     leftSmoother.reset();
     rightSmoother.reset();
     return;
   }
 
-  const lC = palmCenter(leftLm);
-  const rC = palmCenter(rightLm);
+  let lPos = null;
+  let rPos = null;
 
-  const ls = leftSmoother.push(lC.x, lC.y);
-  const rs = rightSmoother.push(rC.x, rC.y);
+  if (leftLm) lPos = handTracks.left.last;
+  else if (leftFresh) lPos = predictFromTrack(handTracks.left, now);
+
+  if (rightLm) rPos = handTracks.right.last;
+  else if (rightFresh) rPos = predictFromTrack(handTracks.right, now);
+
+  if (lPos) leftSmoother.push(lPos.x, lPos.y); else leftSmoother.reset();
+  if (rPos) rightSmoother.push(rPos.x, rPos.y); else rightSmoother.reset();
+
+  const ls = leftSmoother.get();
+  const rs = rightSmoother.get();
+  if (!(ls && rs)) return;
 
   // Compute normalized distance in pixels relative to min dimension
   const vw = video.videoWidth || offscreen.width || 1;
@@ -332,7 +392,7 @@ function onHandsResults(results) {
   const dist = Math.sqrt(dx*dx + dy*dy);
   const norm = dist / Math.min(vw, vh);
 
-  const fired = clapDetector.update(norm, true, performance.now());
+  const fired = clapDetector.update(norm, true, now);
   if (fired) {
     nextFilter();
   }
@@ -376,7 +436,7 @@ async function start() {
     await initHands();
     await initCamera();
     handleResize();
-    setLabel(`${FilterList[state.filterIndex].name} • Clap to change • Space = next`);
+    setLabel(FilterList[state.filterIndex].name);
     startDrawLoop();
   } catch (err) {
     console.error(err);

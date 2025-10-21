@@ -10,13 +10,12 @@ body { background: #000; font-family: system-ui, -apple-system, Segoe UI, Roboto
 #filterPanel::-webkit-scrollbar { width: 6px; }
 #filterPanel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.16); border-radius: 6px; }
 #filterList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-#filterList .filterItem { font-size: 12px; line-height: 1; color: rgba(255,255,255,0.85); cursor: pointer; user-select: none; padding: 6px 8px; border-radius: 8px; transition: transform 260ms cubic-bezier(.2,.7,.2,1), text-shadow 260ms cubic-bezier(.2,.7,.2,1), color 240ms ease, background-color 240ms ease, opacity 240ms ease; will-change: transform; }
+#filterList .filterItem { font-size: 14px; line-height: 1.15; color: rgba(255,255,255,0.85); cursor: pointer; user-select: none; padding: 6px 8px; border-radius: 8px; transition: transform 420ms cubic-bezier(.25,.8,.25,1), text-shadow 420ms cubic-bezier(.25,.8,.25,1), color 360ms ease, background-color 360ms ease, opacity 360ms ease; will-change: transform; }
 #filterList .filterItem:hover { background: rgba(255,255,255,0.08); }
 #filterList .filterItem.active { color: #fff; text-shadow: 0 0 12px rgba(44,107,255,0.85), 0 0 22px rgba(44,107,255,0.35); transform: scale(1.12); background: rgba(44,107,255,0.15); }
 
-#hud { position: absolute; left: 16px; bottom: 16px; background: rgba(0,0,0,0.42); padding: 10px 12px; border-radius: 8px; backdrop-filter: blur(4px); box-shadow: 0 6px 18px rgba(0,0,0,0.35); transition: opacity 400ms ease; }
-#hud.hidden { opacity: 0; pointer-events: none; }
-#hud:not(.hidden) { opacity: 1; }
+#hud { display: none !important; }
+/* Instruction HUD has been removed from the UI */
 #label { font-weight: 600; font-size: 14px; margin-bottom: 2px; }
 #hint { font-size: 12px; opacity: 0.85; }
 
